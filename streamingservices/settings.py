@@ -87,11 +87,12 @@ WSGI_APPLICATION = 'streamingservices.wsgi.application'
 # falls back to SQLite for local development.
 import dj_database_url
 
+_DATABASE_URL = os.environ.get('DATABASE_URL', '')
 DATABASES = {
-    'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
-    )
+    'default': dj_database_url.config(conn_max_age=600) if _DATABASE_URL else {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
 
 
@@ -134,7 +135,11 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STORAGES = {
     'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        'BACKEND': (
+            'whitenoise.storage.CompressedManifestStaticFilesStorage'
+            if not DEBUG else
+            'django.contrib.staticfiles.storage.StaticFilesStorage'
+        ),
     },
     'default': {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
