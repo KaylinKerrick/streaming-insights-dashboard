@@ -1,0 +1,382 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block content %}
+
+{# Embed chart data as safe JSON blocks — never use {{ var }} directly in <script> #}
+{{ platform_chart|json_script:"platform-chart-data" }}
+{{ genre_chart|json_script:"genre-chart-data" }}
+{{ year_chart|json_script:"year-chart-data" }}
+{{ rating_chart|json_script:"rating-chart-data" }}
+
+<!-- Page header -->
+<div class="page-header d-flex align-items-end justify-content-between">
+    <div>
+        <h1>Streaming Insights</h1>
+        <p>Explore movie &amp; TV metadata across streaming platforms.</p>
+    </div>
+</div>
+
+<!-- Summary stat cards -->
+<div class="row g-3 mb-4">
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100">
+            <div class="card-body d-flex align-items-center justify-content-between p-4">
+                <div>
+                    <p class="stat-label mb-2">Total Titles</p>
+                    <p class="stat-value mb-0">
+                        {% if stats.total_titles %}{{ stats.total_titles }}{% else %}&mdash;{% endif %}
+                    </p>
+                </div>
+                <i class="bi bi-film stat-icon text-accent" aria-hidden="true"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100">
+            <div class="card-body d-flex align-items-center justify-content-between p-4">
+                <div>
+                    <p class="stat-label mb-2">Platforms</p>
+                    <p class="stat-value mb-0" style="color: var(--si-sage);">
+                        {% if stats.total_platforms %}{{ stats.total_platforms }}{% else %}&mdash;{% endif %}
+                    </p>
+                </div>
+                <i class="bi bi-tv stat-icon text-sage" aria-hidden="true"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100">
+            <div class="card-body d-flex align-items-center justify-content-between p-4">
+                <div>
+                    <p class="stat-label mb-2">Genres</p>
+                    <p class="stat-value mb-0" style="color: var(--si-blush);">
+                        {% if stats.total_genres %}{{ stats.total_genres }}{% else %}&mdash;{% endif %}
+                    </p>
+                </div>
+                <i class="bi bi-tags stat-icon text-blush" aria-hidden="true"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100">
+            <div class="card-body d-flex align-items-center justify-content-between p-4">
+                <div>
+                    <p class="stat-label mb-2">Avg Rating</p>
+                    <p class="stat-value mb-0">
+                        {% if stats.avg_rating %}{{ stats.avg_rating }}<small class="fs-6 fw-normal text-muted"> / 10</small>
+                        {% else %}&mdash;{% endif %}
+                    </p>
+                    {% if stats.rated_count %}
+                    <p class="text-muted mb-0" style="font-size:0.72rem;">{{ stats.rated_count }} rated titles</p>
+                    {% endif %}
+                </div>
+                <i class="bi bi-star-half stat-icon text-accent" aria-hidden="true"></i>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<hr class="divider-ghibli">
+
+{% if stats.total_titles %}
+
+<!-- Charts row 1: platform count + genre distribution -->
+<div class="row g-3 mb-3">
+
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header-ghibli">
+                <h3>Titles by Platform</h3>
+            </div>
+            <div class="card-body p-3">
+                <div class="chart-container">
+                    <canvas id="platformChart" aria-label="Bar chart showing number of titles per streaming platform" role="img"></canvas>
+                </div>
+                <p class="text-muted mt-2 mb-0" style="font-size:0.75rem;">
+                    Counts distinct titles in the dataset. Platform data is illustrative and may not reflect current catalogs.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header-ghibli">
+                <h3>Genre Distribution</h3>
+            </div>
+            <div class="card-body p-3">
+                <div class="chart-container">
+                    <canvas id="genreChart" aria-label="Doughnut chart showing number of titles per genre" role="img"></canvas>
+                </div>
+                <p class="text-muted mt-2 mb-0" style="font-size:0.75rem;">
+                    Genre counts overlap &mdash; a title can belong to multiple genres, so totals exceed the number of unique titles.
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Charts row 2: release years + avg ratings -->
+<div class="row g-3">
+
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header-ghibli">
+                <h3>Titles by Release Year</h3>
+            </div>
+            <div class="card-body p-3">
+                <div class="chart-container">
+                    <canvas id="yearChart" aria-label="Bar chart showing number of titles released per year" role="img"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header-ghibli">
+                <h3>Avg Rating by Platform</h3>
+            </div>
+            <div class="card-body p-3">
+                <div class="chart-container">
+                    <canvas id="ratingChart" aria-label="Bar chart showing average TMDB rating per platform" role="img"></canvas>
+                </div>
+                <p class="text-muted mt-2 mb-0" style="font-size:0.75rem;">
+                    TMDB ratings (0&ndash;10). Sample sizes vary &mdash; hover bars for rated title counts.
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% else %}
+
+<!-- Empty state -->
+<div class="row g-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body empty-state">
+                <i class="bi bi-cloud-fog2 empty-state-icon" aria-hidden="true"></i>
+                <p class="empty-state-title">The catalog is still quiet&hellip;</p>
+                <p class="empty-state-body">
+                    Charts and statistics will appear here once you import a dataset.<br>
+                    Run <code>python manage.py import_content data/sample_content.csv</code> to get started.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+(function () {
+    // Ghibli-inspired palette — matches CSS variables
+    const PALETTE = [
+        '#c9a55a', // golden amber
+        '#7aab97', // forest sage
+        '#d4849a', // cherry blossom
+        '#8b9eb7', // dusty blue
+        '#b4a0c8', // wisteria lavender
+        '#d4c47a', // pale gold
+        '#6b9e8a', // deep sage
+        '#e8c4a0', // parchment
+        '#a07850', // earth brown
+        '#9090b8', // cool lavender
+        '#c87a70', // terracotta
+        '#70a0c8', // sky blue
+        '#b8a870', // olive
+        '#88b870', // leaf green
+    ];
+
+    // Chart.js global defaults for the Ghibli theme
+    Chart.defaults.color           = '#7a8ea8';
+    Chart.defaults.font.family     = "'DM Sans', sans-serif";
+    Chart.defaults.font.size       = 12;
+    Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(18, 28, 42, 0.92)';
+    Chart.defaults.plugins.tooltip.titleColor      = '#e8dcc8';
+    Chart.defaults.plugins.tooltip.bodyColor       = '#c4b89a';
+    Chart.defaults.plugins.tooltip.borderColor     = '#2a3a50';
+    Chart.defaults.plugins.tooltip.borderWidth     = 1;
+    Chart.defaults.plugins.tooltip.padding         = 10;
+    Chart.defaults.plugins.legend.labels.color     = '#c4b89a';
+    Chart.defaults.plugins.legend.labels.padding   = 16;
+
+    const gridColor  = 'rgba(42, 58, 80, 0.5)';
+    const tickColor  = '#7a8ea8';
+
+    function readJson(id) {
+        const el = document.getElementById(id);
+        return el ? JSON.parse(el.textContent) : null;
+    }
+
+    // ── Chart A: Titles by platform (horizontal bar) ──────────────────────────
+    const platformData = readJson('platform-chart-data');
+    if (platformData && platformData.labels.length) {
+        new Chart(document.getElementById('platformChart'), {
+            type: 'bar',
+            data: {
+                labels: platformData.labels,
+                datasets: [{
+                    label: 'Titles in dataset',
+                    data:  platformData.data,
+                    backgroundColor: platformData.labels.map((_, i) => PALETTE[i % PALETTE.length] + 'cc'),
+                    borderColor:     platformData.labels.map((_, i) => PALETTE[i % PALETTE.length]),
+                    borderWidth: 1,
+                    borderRadius: 5,
+                }],
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { color: tickColor, stepSize: 1 },
+                        grid:  { color: gridColor },
+                    },
+                    y: {
+                        ticks: { color: '#c4b89a' },
+                        grid:  { color: 'transparent' },
+                    },
+                },
+            },
+        });
+    }
+
+    // ── Chart B: Genre distribution (doughnut) ─────────────────────────────────
+    const genreData = readJson('genre-chart-data');
+    if (genreData && genreData.labels.length) {
+        new Chart(document.getElementById('genreChart'), {
+            type: 'doughnut',
+            data: {
+                labels: genreData.labels,
+                datasets: [{
+                    data:            genreData.data,
+                    backgroundColor: genreData.labels.map((_, i) => PALETTE[i % PALETTE.length] + 'cc'),
+                    borderColor:     '#182030',
+                    borderWidth: 2,
+                    hoverOffset: 6,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 10, font: { size: 10 }, padding: 10 },
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` ${ctx.label}: ${ctx.parsed} titles`,
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    // ── Chart C: Titles by release year (bar) ─────────────────────────────────
+    const yearData = readJson('year-chart-data');
+    if (yearData && yearData.labels.length) {
+        new Chart(document.getElementById('yearChart'), {
+            type: 'bar',
+            data: {
+                labels: yearData.labels,
+                datasets: [{
+                    label: 'Titles released',
+                    data:  yearData.data,
+                    backgroundColor: '#7aab97aa',
+                    borderColor:     '#7aab97',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: {
+                        ticks: { color: tickColor, maxRotation: 45 },
+                        grid:  { color: 'transparent' },
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: tickColor, stepSize: 1 },
+                        grid:  { color: gridColor },
+                    },
+                },
+            },
+        });
+    }
+
+    // ── Chart D: Avg rating by platform (bar) ─────────────────────────────────
+    const ratingData = readJson('rating-chart-data');
+    if (ratingData && ratingData.labels.length) {
+        new Chart(document.getElementById('ratingChart'), {
+            type: 'bar',
+            data: {
+                labels: ratingData.labels,
+                datasets: [{
+                    label: 'Avg TMDB rating',
+                    data:  ratingData.data,
+                    backgroundColor: ratingData.labels.map((_, i) => PALETTE[i % PALETTE.length] + 'cc'),
+                    borderColor:     ratingData.labels.map((_, i) => PALETTE[i % PALETTE.length]),
+                    borderWidth: 1,
+                    borderRadius: 5,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                const count = ratingData.counts[ctx.dataIndex];
+                                return [
+                                    ` Avg rating: ${ctx.parsed.y}`,
+                                    ` Based on ${count} rated title${count !== 1 ? 's' : ''}`,
+                                ];
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#c4b89a' },
+                        grid:  { color: 'transparent' },
+                    },
+                    y: {
+                        min: 0,
+                        max: 10,
+                        ticks: { color: tickColor },
+                        grid:  { color: gridColor },
+                    },
+                },
+            },
+        });
+    }
+
+})();
+</script>
+{% endblock %}

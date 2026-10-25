@@ -1,0 +1,351 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Insights{% endblock %}
+{% block nav_insights %}active{% endblock %}
+
+{% block content %}
+
+{% if not empty %}
+{{ type_chart|json_script:"type-chart-data" }}
+{{ decade_chart|json_script:"decade-chart-data" }}
+{% endif %}
+
+<div class="page-header">
+    <h1>Insights</h1>
+    <p>Patterns and highlights across the full imported catalog.</p>
+</div>
+
+{% if empty %}
+<div class="card">
+    <div class="card-body empty-state">
+        <i class="bi bi-cloud-fog2 empty-state-icon" aria-hidden="true"></i>
+        <p class="empty-state-title">No data imported yet</p>
+        <p class="empty-state-body">Run <code>python manage.py import_content</code> to load content.</p>
+    </div>
+</div>
+
+{% else %}
+
+<!-- Stat headline row -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-value">{{ total }}</div>
+            <div class="stat-label">Total Titles</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-value">{{ movies_pct }}%</div>
+            <div class="stat-label">Movies</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-value">{{ tv_pct }}%</div>
+            <div class="stat-label">TV Shows</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-value">{{ top_decade|default:"—" }}</div>
+            <div class="stat-label">Top Decade</div>
+        </div>
+    </div>
+</div>
+
+<!-- Narrative findings -->
+<div class="row g-3 mb-4">
+    {% if top_genre %}
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <p class="text-muted small text-uppercase mb-1">Most Common Genre</p>
+                <p class="fw-bold fs-5 text-accent mb-1">{{ top_genre.name }}</p>
+                <p class="text-muted small">{{ top_genre.count }} title{{ top_genre.count|pluralize }} in the catalog</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if top_platform %}
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <p class="text-muted small text-uppercase mb-1">Largest Catalog</p>
+                <p class="fw-bold fs-5 text-sage mb-1">{{ top_platform.name }}</p>
+                <p class="text-muted small">{{ top_platform.count }} title{{ top_platform.count|pluralize }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if top_rated_platform %}
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <p class="text-muted small text-uppercase mb-1">Highest Avg Rating</p>
+                <p class="fw-bold fs-5 text-blush mb-1">{{ top_rated_platform.name }}</p>
+                <p class="text-muted small">
+                    <span class="rating-badge">
+                        <i class="bi bi-star-fill" aria-hidden="true"></i>
+                        {{ top_rated_platform.avg_rating }}
+                    </span>
+                    across {{ top_rated_platform.rated_count }} rated title{{ top_rated_platform.rated_count|pluralize }}
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Charts row -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header-ghibli">
+                <h3>Movies vs TV</h3>
+            </div>
+            <div class="card-body p-3">
+                <div class="chart-container" style="min-height:220px;">
+                    <canvas id="typeChart" aria-label="Movies vs TV shows distribution" role="img"></canvas>
+                </div>
+                <p class="text-muted small text-center mt-2">
+                    {{ movies_count }} movie{{ movies_count|pluralize }} &middot; {{ tv_count }} TV show{{ tv_count|pluralize }}
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-header-ghibli">
+                <h3>Titles by Decade</h3>
+            </div>
+            <div class="card-body p-3">
+                <div class="chart-container" style="min-height:220px;">
+                    <canvas id="decadeChart" aria-label="Titles per decade" role="img"></canvas>
+                </div>
+                {% if top_decade %}
+                <p class="text-muted small text-center mt-2">
+                    Most titles from the {{ top_decade }} ({{ top_decade_count }} title{{ top_decade_count|pluralize }})
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Genre tables row -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header-ghibli">
+                <h3>Top Genres — All Time</h3>
+            </div>
+            <div class="card-body p-0">
+                {% if top_genres %}
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Genre</th>
+                                <th class="text-end">Titles</th>
+                                <th style="width:40%;">Share</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for g in top_genres %}
+                            {% with pct=g.count|floatformat:0 %}
+                            <tr>
+                                <td>{{ g.name }}</td>
+                                <td class="text-end fw-bold">{{ g.count }}</td>
+                                <td>
+                                    <div style="background:rgba(201,165,90,0.15);border-radius:3px;overflow:hidden;">
+                                        <div style="height:6px;background:var(--si-accent);width:{{ g.count|floatformat:0 }}%;max-width:100%;"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endwith %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">No genre data.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header-ghibli">
+                <h3>Trending Genres — Since 2015</h3>
+            </div>
+            <div class="card-body p-0">
+                {% if top_recent_genres %}
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Genre</th>
+                                <th class="text-end">Titles (2015+)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for g in top_recent_genres %}
+                            <tr>
+                                <td class="text-sage fw-medium">{{ g.name }}</td>
+                                <td class="text-end fw-bold">{{ g.count }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">No recent genre data.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top-rated content -->
+{% if top_content %}
+<div class="card mb-4">
+    <div class="card-header-ghibli">
+        <h3>Highest Rated Titles</h3>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:40%;">Title</th>
+                        <th>Type</th>
+                        <th>Year</th>
+                        <th>Rating</th>
+                        <th class="d-none d-md-table-cell">Genres</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in top_content %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'dashboard:content_detail' item.pk %}" class="text-accent text-decoration-none fw-medium">
+                                {{ item.title }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="badge {% if item.content_type == 'movie' %}bg-accent{% else %}bg-sage{% endif %}"
+                                  style="background:{% if item.content_type == 'movie' %}rgba(201,165,90,0.2);color:var(--si-accent){% else %}rgba(122,171,151,0.2);color:var(--si-sage){% endif %};font-size:0.7rem;">
+                                {{ item.get_content_type_display }}
+                            </span>
+                        </td>
+                        <td class="text-muted">{{ item.release_year|default:"—" }}</td>
+                        <td>
+                            <span class="rating-badge">
+                                <i class="bi bi-star-fill" aria-hidden="true"></i>
+                                {{ item.display_rating }}
+                            </span>
+                        </td>
+                        <td class="d-none d-md-table-cell text-muted small">
+                            {% for g in item.genres.all|slice:":3" %}{{ g.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Disclaimer -->
+<p class="text-muted small text-center">
+    <i class="bi bi-info-circle me-1"></i>
+    All figures reflect the imported dataset only. Genre counts exceed total titles because titles can belong to multiple genres.
+</p>
+
+{% endif %}
+
+{% endblock %}
+
+
+{% block extra_js %}
+{% if not empty %}
+<script>
+(function () {
+    const PALETTE = ['#c9a55a','#7aab97','#d4849a','#8b9eb7','#b4a0c8','#d4c47a','#6b9e8a','#e8c4a0','#a07850','#9090b8'];
+    const gridColor = 'rgba(42,58,80,0.5)';
+
+    Chart.defaults.color       = '#7a8ea8';
+    Chart.defaults.font.family = "'DM Sans', sans-serif";
+    Chart.defaults.font.size   = 11;
+    Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(18,28,42,0.92)';
+    Chart.defaults.plugins.tooltip.titleColor      = '#e8dcc8';
+    Chart.defaults.plugins.tooltip.bodyColor       = '#c4b89a';
+    Chart.defaults.plugins.tooltip.borderColor     = '#2a3a50';
+    Chart.defaults.plugins.tooltip.borderWidth     = 1;
+
+    function readJson(id) {
+        const el = document.getElementById(id);
+        return el ? JSON.parse(el.textContent) : null;
+    }
+
+    // Movies vs TV doughnut
+    const typeData = readJson('type-chart-data');
+    if (typeData && typeData.labels.length) {
+        new Chart(document.getElementById('typeChart'), {
+            type: 'doughnut',
+            data: {
+                labels: typeData.labels,
+                datasets: [{
+                    data: typeData.data,
+                    backgroundColor: ['#c9a55acc', '#7aab97cc'],
+                    borderColor: '#182030',
+                    borderWidth: 2,
+                    hoverOffset: 5,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 10 } },
+                    tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}` } },
+                },
+            },
+        });
+    }
+
+    // Decade bar chart
+    const decadeData = readJson('decade-chart-data');
+    if (decadeData && decadeData.labels.length) {
+        new Chart(document.getElementById('decadeChart'), {
+            type: 'bar',
+            data: {
+                labels: decadeData.labels,
+                datasets: [{
+                    label: 'Titles',
+                    data: decadeData.data,
+                    backgroundColor: PALETTE.map(c => c + '99'),
+                    borderColor: PALETTE,
+                    borderWidth: 1,
+                    borderRadius: 3,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#7a8ea8' }, grid: { color: 'transparent' } },
+                    y: { beginAtZero: true, ticks: { color: '#7a8ea8', stepSize: 1 }, grid: { color: gridColor } },
+                },
+            },
+        });
+    }
+})();
+</script>
+{% endif %}
+{% endblock %}

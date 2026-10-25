@@ -1,0 +1,266 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Explore{% endblock %}
+{% block nav_explore %}active{% endblock %}
+
+{% block content %}
+
+<!-- Page header -->
+<div class="page-header">
+    <h1>Explore</h1>
+    <p>Search and filter the content catalog.</p>
+</div>
+
+<!-- Filter panel -->
+<div class="filter-panel mb-4">
+    <form method="GET" action="{% url 'dashboard:explore' %}" role="search">
+        {# No 'page' field here — submitting always resets to page 1 #}
+
+        <div class="row g-2 align-items-end">
+
+            <!-- Search -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <label for="id_q" class="form-label">Search</label>
+                <div class="input-group">
+                    <span class="input-group-text filter-icon"><i class="bi bi-search"></i></span>
+                    <input type="text" id="id_q" name="q" class="form-control"
+                           placeholder="Title…" value="{{ current_q }}" autocomplete="off">
+                </div>
+            </div>
+
+            <!-- Platform -->
+            <div class="col-6 col-md-3 col-lg-2">
+                <label for="id_platform" class="form-label">Platform</label>
+                <select id="id_platform" name="platform" class="form-select">
+                    <option value="">All Platforms</option>
+                    {% for p in platforms %}
+                    <option value="{{ p.slug }}" {% if p.slug == current_platform %}selected{% endif %}>
+                        {{ p.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Genre -->
+            <div class="col-6 col-md-3 col-lg-2">
+                <label for="id_genre" class="form-label">Genre</label>
+                <select id="id_genre" name="genre" class="form-select">
+                    <option value="">All Genres</option>
+                    {% for g in genres %}
+                    <option value="{{ g.slug }}" {% if g.slug == current_genre %}selected{% endif %}>
+                        {{ g.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Content type -->
+            <div class="col-6 col-md-3 col-lg-2">
+                <label for="id_content_type" class="form-label">Type</label>
+                <select id="id_content_type" name="content_type" class="form-select">
+                    <option value="">All Types</option>
+                    <option value="movie" {% if current_content_type == 'movie' %}selected{% endif %}>Movies</option>
+                    <option value="tv"    {% if current_content_type == 'tv'    %}selected{% endif %}>TV Shows</option>
+                </select>
+            </div>
+
+            <!-- Min rating -->
+            <div class="col-6 col-md-3 col-lg-1">
+                <label for="id_min_rating" class="form-label">Min Rating</label>
+                <select id="id_min_rating" name="min_rating" class="form-select">
+                    <option value="">Any</option>
+                    {% for val, label in min_rating_options %}
+                    <option value="{{ val }}" {% if current_min_rating == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+        </div>
+
+        <!-- Second row: year range, sort, buttons -->
+        <div class="row g-2 align-items-end mt-1">
+
+            <div class="col-6 col-md-3 col-lg-2">
+                <label for="id_year_from" class="form-label">Year from</label>
+                <input type="number" id="id_year_from" name="year_from" class="form-control"
+                       placeholder="e.g. 2010" min="1888" max="2100"
+                       value="{{ current_year_from }}">
+            </div>
+
+            <div class="col-6 col-md-3 col-lg-2">
+                <label for="id_year_to" class="form-label">Year to</label>
+                <input type="number" id="id_year_to" name="year_to" class="form-control"
+                       placeholder="e.g. 2024" min="1888" max="2100"
+                       value="{{ current_year_to }}">
+            </div>
+
+            <div class="col-6 col-md-3 col-lg-2">
+                <label for="id_sort" class="form-label">Sort by</label>
+                <select id="id_sort" name="sort" class="form-select">
+                    {% for val, label in sort_options %}
+                    <option value="{{ val }}" {% if val == current_sort %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-6 col-md-3 col-lg-2 d-flex gap-2">
+                <button type="submit" class="btn btn-ghibli w-100">
+                    <i class="bi bi-funnel me-1"></i>Apply
+                </button>
+                <a href="{% url 'dashboard:explore' %}" class="btn btn-outline-ghibli flex-shrink-0"
+                   title="Clear filters" aria-label="Clear all filters">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </div>
+
+        </div>
+    </form>
+</div>
+
+<!-- Results count + page info -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <p class="text-muted mb-0" style="font-size:0.88rem;">
+        {% if total_count %}
+            {{ total_count }} result{{ total_count|pluralize }}
+            {% if page_obj.paginator.num_pages > 1 %}
+            &mdash; page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            {% endif %}
+        {% else %}
+            No results
+        {% endif %}
+    </p>
+</div>
+
+<!-- Content card grid -->
+{% if page_obj.object_list %}
+
+<div class="row g-3 mb-4">
+    {% for item in page_obj %}
+    <div class="col-12 col-sm-6 col-lg-4">
+        <a href="{% url 'dashboard:content_detail' item.pk %}"
+           class="text-decoration-none" aria-label="View details for {{ item.title }}">
+            <div class="card content-card h-100">
+                {% if item.poster_path %}
+                <div class="poster-area">
+                    <img src="https://image.tmdb.org/t/p/w300{{ item.poster_path }}"
+                         alt="Poster for {{ item.title }}"
+                         class="poster-img"
+                         loading="lazy">
+                </div>
+                {% endif %}
+                <div class="card-body d-flex flex-column p-3">
+
+                    <h2 class="content-card-title mb-1">{{ item.title }}</h2>
+
+                    <!-- Year + type -->
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        {% if item.release_year %}
+                        <span class="text-muted" style="font-size:0.82rem;">{{ item.release_year }}</span>
+                        {% endif %}
+                        <span class="badge-type">
+                            {{ item.get_content_type_display }}
+                        </span>
+                    </div>
+
+                    <!-- Genres -->
+                    {% if item.genres.all %}
+                    <div class="d-flex flex-wrap gap-1 mb-2">
+                        {% for genre in item.genres.all|slice:":3" %}
+                        <span class="badge-genre">{{ genre.name }}</span>
+                        {% endfor %}
+                        {% if item.genres.count > 3 %}
+                        <span class="badge-genre">+{{ item.genres.count|add:"-3" }}</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Spacer pushes rating + platforms to the bottom -->
+                    <div class="mt-auto">
+
+                        <!-- Rating -->
+                        {% if item.tmdb_rating %}
+                        <div class="mb-2">
+                            <span class="rating-badge">
+                                <i class="bi bi-star-fill" aria-hidden="true"></i>
+                                {{ item.tmdb_rating }}
+                                <span class="text-muted" style="font-size:0.72rem;">/ 10</span>
+                            </span>
+                        </div>
+                        {% endif %}
+
+                        <!-- Platforms -->
+                        {% if item.platforms.all %}
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for platform in item.platforms.all %}
+                            <span class="badge-platform">{{ platform.name }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if page_obj.paginator.num_pages > 1 %}
+<nav aria-label="Content page navigation">
+    <ul class="pagination justify-content-center gap-2">
+
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?{{ base_query }}{% if base_query %}&{% endif %}page={{ page_obj.previous_page_number }}"
+               aria-label="Previous page">
+                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link"><i class="bi bi-chevron-left" aria-hidden="true"></i></span>
+        </li>
+        {% endif %}
+
+        <li class="page-item disabled">
+            <span class="page-link text-muted" style="background:transparent;border:none;font-size:0.85rem;">
+                {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?{{ base_query }}{% if base_query %}&{% endif %}page={{ page_obj.next_page_number }}"
+               aria-label="Next page">
+                <i class="bi bi-chevron-right" aria-hidden="true"></i>
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link"><i class="bi bi-chevron-right" aria-hidden="true"></i></span>
+        </li>
+        {% endif %}
+
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+
+<!-- No results -->
+<div class="card">
+    <div class="card-body empty-state">
+        <i class="bi bi-search empty-state-icon" aria-hidden="true"></i>
+        <p class="empty-state-title">Nothing found&hellip;</p>
+        <p class="empty-state-body">
+            Try adjusting your filters or
+            <a href="{% url 'dashboard:explore' %}" class="text-accent">clear all filters</a>
+            to see the full catalog.
+        </p>
+    </div>
+</div>
+
+{% endif %}
+
+{% endblock %}

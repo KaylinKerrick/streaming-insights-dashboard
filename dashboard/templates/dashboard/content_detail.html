@@ -1,0 +1,147 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}{{ content.title }}{% endblock %}
+{% block nav_explore %}active{% endblock %}
+
+{% block content %}
+
+<!-- Back link -->
+<div class="mb-4">
+    <a href="{% url 'dashboard:explore' %}" class="btn-back">
+        <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to Explore
+    </a>
+</div>
+
+<div class="row g-4">
+
+    <!-- Poster column -->
+    <div class="col-12 col-md-3">
+        <div class="detail-poster">
+            {% if content.poster_path %}
+            <img src="https://image.tmdb.org/t/p/w342{{ content.poster_path }}"
+                 alt="Poster for {{ content.title }}"
+                 class="img-fluid rounded"
+                 style="width:100%; border: 1px solid var(--si-border);">
+            {% else %}
+            <div class="poster-placeholder detail-poster-placeholder">
+                <span class="poster-letter" aria-hidden="true">{{ content.title|first|upper }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Detail column -->
+    <div class="col-12 col-md-9">
+
+        <!-- Title + year -->
+        <h1 class="mb-1">{{ content.title }}
+            {% if content.release_year %}
+            <span class="text-muted fw-normal" style="font-size:1.1rem;">({{ content.release_year }})</span>
+            {% endif %}
+        </h1>
+
+        <!-- Type + rating badges -->
+        <div class="d-flex align-items-center flex-wrap gap-2 mb-4">
+            <span class="badge-type">{{ content.get_content_type_display }}</span>
+            {% if content.tmdb_rating %}
+            <span class="rating-badge">
+                <i class="bi bi-star-fill" aria-hidden="true"></i>
+                {{ content.tmdb_rating }} / 10
+                {% if content.tmdb_vote_count %}
+                <span class="text-muted" style="font-size:0.72rem;">
+                    &nbsp;({{ content.tmdb_vote_count|floatformat:"0" }} votes)
+                </span>
+                {% endif %}
+            </span>
+            {% endif %}
+        </div>
+
+        <!-- Overview -->
+        {% if content.overview %}
+        <div class="mb-4">
+            <h2 class="detail-section-heading">Overview</h2>
+            <p class="detail-overview">{{ content.overview }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Metadata grid -->
+        <div class="detail-meta-grid mb-4">
+            {% if content.release_year %}
+            <div class="detail-meta-item">
+                <span class="detail-meta-label">Release Year</span>
+                <span class="detail-meta-value">{{ content.release_year }}</span>
+            </div>
+            {% endif %}
+            <div class="detail-meta-item">
+                <span class="detail-meta-label">Type</span>
+                <span class="detail-meta-value">{{ content.get_content_type_display }}</span>
+            </div>
+            {% if content.tmdb_id %}
+            <div class="detail-meta-item">
+                <span class="detail-meta-label">TMDB ID</span>
+                <span class="detail-meta-value">{{ content.tmdb_id }}</span>
+            </div>
+            {% endif %}
+            {% if content.tmdb_rating %}
+            <div class="detail-meta-item">
+                <span class="detail-meta-label">TMDB Rating</span>
+                <span class="detail-meta-value text-accent">{{ content.tmdb_rating }} / 10</span>
+            </div>
+            {% endif %}
+            {% if content.tmdb_vote_count %}
+            <div class="detail-meta-item">
+                <span class="detail-meta-label">Vote Count</span>
+                <span class="detail-meta-value">{{ content.tmdb_vote_count|floatformat:"0" }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Genres -->
+        {% if content.genres.all %}
+        <div class="mb-4">
+            <h2 class="detail-section-heading">Genres</h2>
+            <div class="d-flex flex-wrap gap-2">
+                {% for genre in content.genres.all %}
+                <span class="badge-genre badge-genre-lg">{{ genre.name }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Platform associations -->
+        {% if content.platform_links.all %}
+        <div class="mb-4">
+            <h2 class="detail-section-heading">Platform Associations</h2>
+            <div class="d-flex flex-wrap gap-2 mb-2">
+                {% for link in content.platform_links.all %}
+                <span class="badge-platform badge-platform-lg">{{ link.platform.name }}</span>
+                {% endfor %}
+            </div>
+            <p class="text-muted mb-0" style="font-size:0.78rem;">
+                <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+                Platform associations are sourced from the imported dataset and may not
+                reflect current streaming availability.
+                {% for link in content.platform_links.all %}
+                    {% if link.source %}
+                        Source: {{ link.source }}.
+                    {% endif %}
+                {% endfor %}
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- Attribution -->
+        {% if content.tmdb_id %}
+        <div class="detail-attribution">
+            <i class="bi bi-database me-1" aria-hidden="true"></i>
+            Metadata sourced from
+            <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer"
+               class="text-accent">The Movie Database (TMDB)</a>.
+            This product uses the TMDB API but is not endorsed or certified by TMDB.
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+{% endblock %}

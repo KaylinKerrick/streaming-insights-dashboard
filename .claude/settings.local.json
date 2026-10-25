@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo.)",
+      "Bash(python manage.py check)",
+      "Bash(python manage.py migrate)",
+      "Bash(python -c ' *)",
+      "Bash(python manage.py test dashboard --verbosity=2)",
+      "Bash(python manage.py import_content data/sample_content.csv)",
+      "Bash(python manage.py import_content data/sample_content.csv --no-update)"
+    ]
+  }
+}
